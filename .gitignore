@@ -1,0 +1,7 @@
+.idea
+__pycache__
+infer_model
+test_images
+venv
+monitor.log
+test.py
