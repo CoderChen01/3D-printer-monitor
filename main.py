@@ -4,8 +4,8 @@ import logging
 import subprocess
 import multiprocessing as mp
 
-
 import cv2
+import RPi.GPIO as GPIO
 
 import configs
 from failure_predictor import infer
@@ -45,45 +45,12 @@ class Monitor:
         self.alarm_num = alarm_num
         self.alarm_interval = alarm_interval * 60
         self.event_num = event_num
-        self.predictor = infer.Detector(configs.MODEL_DIR)
         self.shared_queue = mp.Queue()
         self._is_run = mp.Value('i', 0)
 
-    @staticmethod
-    def check_network():
-        fnull = open(os.devnull, 'w')
-        retval = subprocess.call('ping ' + configs.PING_NETWORK + ' -n 2',
-                                 shell=True,
-                                 stdout=fnull,
-                                 stderr=fnull)
-        fnull.close()
-        return False if retval else True
-
-    @staticmethod
-    def run_monitor(detector, handler):
-        d = mp.Process(target=detector)
-        h = mp.Process(target=handler)
-        d.start()
-        d.start()
-        return d, h
-
-    def set_run_status(self, is_run):
-        if is_run:
-            self._is_run.value = 1
-        else:
-            self._is_run.value = 0
-
-    def get_run_status(self):
-        return self._is_run
-
-    def shutdown(self):
-        pass
-
-    def online_close(self):
-        pass
-
     def detector(self):
         self.set_run_status(True)
+        predictor = infer.Detector(configs.MODEL_DIR)
         start_time = time.time()
         capture = cv2.VideoCapture(configs.CAMERA_FILE)
         if not capture.isOpened():
@@ -108,9 +75,9 @@ class Monitor:
                                'No frame was read')
                 continue
             time.sleep(self.inspection_interval)
-            result = self.predictor.predict(frame,
+            result = predictor.predict(frame,
                                    threshold=configs.INFER_THRESHOLD)
-            if result.get('length') <= self.failure_num:
+            if result.get('num', 0) <= self.failure_num:
                 self.shared_queue.put(False)
                 continue
             self.shared_queue.put(True)
@@ -132,25 +99,23 @@ class Monitor:
                             'When the number of detection'
                             ' events exceeds the predetermined threshold,'
                             ' the switch is automatically turned off')
+                self.set_run_status(False)
+                event_num = 0
                 self.shutdown()
 
     def online_handler(self):
         pass
 
-    def change_monitor(self, old_detector, old_handler, new_monitor):
-        self.set_run_status(False)
-        while old_detector.is_alive() or old_detector.is_alive():
-            continue
-        return new_monitor()
-
     def local_monitor(self):
-        return  self.run_monitor(self.detector, self.local_handler)
+        return self.run_monitor(self.detector, self.local_handler)
 
     def online_monitor(self):
         od, oh = self.run_monitor(self.detector, self.online_handler)
         while True:
             while self.check_network():
                 if not od.is_alive() and not oh.is_alive():
+                    logger.info('Monitor.online_monitor: %s',
+                                'Finished')
                     return
                 continue
             logger.warning('Monitor.online_monitor: %s',
@@ -164,6 +129,48 @@ class Monitor:
                            'Network exception, switch running mode')
             od, oh = self.change_monitor(ld, lh, self.online_monitor)
 
+    def change_monitor(self, old_detector, old_handler, new_monitor):
+        self.set_run_status(False)
+        while old_detector.is_alive() and old_handler.is_alive():
+            continue
+        return new_monitor()
+
+    @staticmethod
+    def check_network():
+        fnull = open(os.devnull, 'w')
+        retval = subprocess.call('ping ' + configs.PING_NETWORK + ' -n 2',
+                                 shell=True,
+                                 stdout=fnull,
+                                 stderr=fnull)
+        fnull.close()
+        return False if retval else True
+
+    @staticmethod
+    def run_monitor(detector, handler):
+        d = mp.Process(target=detector)
+        h = mp.Process(target=handler)
+        d.start()
+        h.start()
+        return d, h
+
+    def set_run_status(self, is_run):
+        if is_run:
+            self._is_run.value = 1
+        else:
+            self._is_run.value = 0
+
+    def get_run_status(self):
+        return self._is_run.value
+
+    @staticmethod
+    def shutdown():
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(11, GPIO.OUT)
+        GPIO.output(11, GPIO.HIGH)
+        GPIO.cleanup()
+
+    def online_close(self):
+        pass
 
 if __name__ == '__main__':
     from uuid import uuid4

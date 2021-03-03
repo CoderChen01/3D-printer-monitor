@@ -3,5 +3,6 @@ __pycache__
 infer_model
 test_images
 venv
+RPi
 monitor.log
 test.py

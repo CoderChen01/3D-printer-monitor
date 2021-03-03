@@ -512,7 +512,7 @@ class Detector:
         results = []
         if not run_benchmark:
             if reduce(lambda x, y: x * y, np_boxes.shape) < 6:
-                results = {'boxes': np.array([]), 'length': 0}
+                results = {'boxes': np.array([]), 'num': 0}
             else:
                 results = self.postprocess(
                     np_boxes, np_masks, im_info, threshold=threshold)
