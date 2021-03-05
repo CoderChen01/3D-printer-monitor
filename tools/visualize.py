@@ -12,12 +12,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import division
+import os
 
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw
+
+
+def visualize(image_file,
+              results,
+              labels,
+              mask_resolution=14,
+              output_dir='output/'):
+    # visualize the predict result
+    im = visualize_box_mask(
+        image_file, results, labels, mask_resolution=mask_resolution)
+    img_name = os.path.split(image_file)[-1]
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    out_path = os.path.join(output_dir, img_name)
+    im.save(out_path, quality=95)
+    print("save result to: " + out_path)
 
 
 def visualize_box_mask(im, results, labels, mask_resolution=14):

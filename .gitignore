@@ -1,8 +1,7 @@
 .idea
 __pycache__
-infer_model
+paddle_inference_infer_model
 test_images
-venv
-RPi
+model.nb
 monitor.log
 test.py
