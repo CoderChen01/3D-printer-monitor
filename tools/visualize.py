@@ -28,7 +28,10 @@ def visualize(image_file,
     # visualize the predict result
     im = visualize_box_mask(
         image_file, results, labels, mask_resolution=mask_resolution)
-    img_name = os.path.split(image_file)[-1]
+    if isinstance(image_file, str):
+        img_name = os.path.split(image_file)[-1]
+    else:
+        img_name = 'test_image.jpg'
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     out_path = os.path.join(output_dir, img_name)

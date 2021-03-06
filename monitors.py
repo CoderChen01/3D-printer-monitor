@@ -19,7 +19,7 @@ class Monitor:
                  all_time,
                  inspection_interval=10,
                  failure_num=5,
-                 infer='paddlelite'):
+                 infer='paddlelite_infer'):
         self._boot()
         self.infer = infer
         self.uuid = uuid
@@ -41,12 +41,14 @@ class Monitor:
         if self.infer == 'paddle_inference_infer':
             predictor = infer_module.Detector(configs.PADDLE_INFERENCE_MODEL_DIR)
         elif self.infer == 'paddlelite_infer':
-            predictor = infer_module.Detector(configs.PADDLELITE_MODEL)
+            predictor = infer_module.Detector(configs.PADDLELITE_MODEL,
+                                              configs.IMAGE_PREPROCESS_PARAM)
         else:
             logger.error('Monitor.detector: %s',
                          'The Infer parameter can only be paddle_inference_infer'
                          ' or paddlelite_infer!')
             self.set_run_status(False)
+            return
         start_time = time.time()
         capture = cv2.VideoCapture(configs.CAMERA_FILE)
         if not capture.isOpened():
@@ -71,22 +73,28 @@ class Monitor:
                                'No frame was read')
                 continue
             time.sleep(self.inspection_interval)
+            logger.debug('Monitor._detector: %s',
+                         'predicting...')
             result = predictor.predict(frame,
                                        threshold=configs.INFER_THRESHOLD)
+            logger.debug('Monitor._detector: %s',
+                         'finished...')
             if result.get('num', 0) <= self.failure_num:
                 self.shared_queue.put(False)
+                logger.debug('Monitor._detector: %s',
+                             'put False')
                 continue
             self.shared_queue.put(True)
+            logger.debug('Monitor._detector: %s',
+                         'put True')
 
     @staticmethod
     def _shutdown():
-        with GPIOControler(configs.GPIO_POWER_PIN_NUM) as gpio:
-            gpio.shutdown()
+        GPIOControler(configs.GPIO_POWER_PIN_NUM).shutdown()
 
     @staticmethod
     def _boot():
-        with GPIOControler(configs.GPIO_POWER_PIN_NUM) as gpio:
-            gpio.boot()
+        GPIOControler(configs.GPIO_POWER_PIN_NUM).boot()
 
     def _run_monitor(self):
         d = mp.Process(target=self._detector)
@@ -104,11 +112,17 @@ class Monitor:
     def get_run_status(self):
         return self._is_run.value
 
+    def __del__(self):
+        GPIOControler.close()
+
 
 class LocalMonitor(Monitor):
     def __init__(self,
                  uuid,
                  all_time,
+                 inspection_interval=10,
+                 failure_num=5,
+                 infer='paddlelite',
                  event_num=5):
         super(LocalMonitor, self).__init__(uuid, all_time)
         self.event_num = event_num * 60
@@ -127,9 +141,11 @@ class LocalMonitor(Monitor):
             if not self.get_run_status():
                 return
             if self.shared_queue.get():
+                logger.info('LocalMonitor._handler: %s',
+                            'Detect a envent, num: %d' % event_num)
                 event_num += 1
             if event_num == self.event_num:
-                logger.info('Monitor.local_handler: %s',
+                logger.info('LocalMonitor._handler: %s',
                             'When the number of detection'
                             ' events exceeds the predetermined threshold,'
                             ' the switch is automatically turned off')
@@ -142,6 +158,9 @@ class OnlineMonitor(Monitor):
     def __init__(self,
                  uuid,
                  all_time,
+                 inspection_interval=10,
+                 failure_num=5,
+                 infer='paddlelite',
                  alarm_num=3,
                  alarm_interval=2):
         super(OnlineMonitor, self).__init__(uuid, all_time)
@@ -164,7 +183,7 @@ class _Monitor:
                  alarm_num=3,
                  alarm_interval=2,
                  event_num=5,
-                 infer='paddlelite'):
+                 infer='paddlelite_infer'):
         self._boot()
         self.infer = infer
         self.uuid = uuid
@@ -183,12 +202,14 @@ class _Monitor:
         if self.infer == 'paddle_inference_infer':
             predictor = infer_module.Detector(configs.PADDLE_INFERENCE_MODEL_DIR)
         elif self.infer == 'paddlelite_infer':
-            predictor = infer_module.Detector(configs.PADDLELITE_MODEL)
+            predictor = infer_module.Detector(configs.PADDLELITE_MODEL,
+                                              configs.IMAGE_PREPROCESS_PARAM)
         else:
             logger.error('Monitor.detector: %s',
                          'The Infer parameter can only be paddle_inference_infer'
                          ' or paddlelite_infer!')
             self.set_run_status(False)
+            return
         start_time = time.time()
         capture = cv2.VideoCapture(configs.CAMERA_FILE)
         if not capture.isOpened():
@@ -218,6 +239,8 @@ class _Monitor:
             if result.get('num', 0) <= self.failure_num:
                 self.shared_queue.put(False)
                 continue
+            from tools.visualize import visualize
+            visualize(frame, result, configs.PREDICT_LABELS)
             self.shared_queue.put(True)
 
     def local_handler(self):
@@ -302,13 +325,11 @@ class _Monitor:
 
     @staticmethod
     def _shutdown():
-        with GPIOControler(configs.GPIO_POWER_PIN_NUM) as gpio:
-            gpio.shutdown()
+        GPIOControler(configs.GPIO_POWER_PIN_NUM).shutdown()
 
     @staticmethod
     def _boot():
-        with GPIOControler(configs.GPIO_POWER_PIN_NUM) as gpio:
-            gpio.boot()
+        GPIOControler(configs.GPIO_POWER_PIN_NUM).boot()
 
     def online_close(self):
         pass

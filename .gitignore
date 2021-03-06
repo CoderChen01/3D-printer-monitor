@@ -2,6 +2,7 @@
 __pycache__
 paddle_inference_infer_model
 test_images
+output
 model.nb
 monitor.log
 test.py
