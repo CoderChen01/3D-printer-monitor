@@ -1,17 +1,18 @@
 import logging
 from uuid import uuid4
 
+import configs
 from monitors import LocalMonitor
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(configs.LOGGER_NAME)
 logger.setLevel(logging.DEBUG)
 
 fh = logging.FileHandler('monitor.log', mode='w')
-fh.setLevel(logging.DEBUG)
+fh.setLevel(logging.ERROR)
 
 ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
+ch.setLevel(logging.DEBUG)
 
 formater = logging.Formatter('%(asctime)s %(name)s'
                              ' %(levelname)s %(message)s')
@@ -21,5 +22,5 @@ ch.setFormatter(formater)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-monitor = LocalMonitor(uuid4(), 200, 5, event_num=2)
-monitor.run()
+monitor = LocalMonitor(uuid4(), 200, 2, event_num=1)
+ld, lh = monitor.run()

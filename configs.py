@@ -23,3 +23,4 @@ IMAGE_PREPROCESS_PARAM = {
                 'to_bgr': False}
 }
 PREDICT_LABELS = ['failure',]
+LOGGER_NAME = 'monitor'
