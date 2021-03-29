@@ -1,6 +1,5 @@
 import os
 import time
-import logging
 import subprocess
 import importlib
 import multiprocessing as mp
@@ -8,9 +7,10 @@ import multiprocessing as mp
 import cv2
 
 import configs
+from monitor_logger.logger import get_logger
 from gpio_controlers import GPIOControler
 
-logger = logging.getLogger(configs.LOGGER_NAME)
+logger = get_logger()
 
 
 def check_network():
