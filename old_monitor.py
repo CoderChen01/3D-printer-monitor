@@ -8,7 +8,7 @@ import multiprocessing as mp
 import cv2
 
 import configs
-from gpio_controlers import GPIOControler
+from controlers.gpio_controlers import GPIOControler
 
 logger = logging.getLogger(configs.LOGGER_NAME)
 

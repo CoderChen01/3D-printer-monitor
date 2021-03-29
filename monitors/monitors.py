@@ -8,7 +8,7 @@ import cv2
 
 import configs
 from monitor_logger.logger import get_logger
-from gpio_controlers import GPIOControler
+from controlers.gpio_controlers import GPIOControler
 
 logger = get_logger()
 
