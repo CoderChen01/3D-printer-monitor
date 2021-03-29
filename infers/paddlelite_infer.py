@@ -4,17 +4,16 @@ import cv2
 import numpy as np
 from paddlelite.lite import *
 
+import configs
 from tools.preprocess import Resize, Permute, Normalize
 
 
 class Detector:
-    def __init__(self,
-                 model_dir,
-                 preprocess_param):
+    def __init__(self):
         config = MobileConfig()
-        config.set_model_from_file(model_dir)  # load yolov3 model
+        config.set_model_from_file(configs.PADDLELITE_MODEL)  # load yolov3 model
         self._predictor = create_paddle_predictor(config)
-        self.preprocess_param = preprocess_param
+        self.preprocess_param = configs.IMAGE_PREPROCESS_PARAM
 
     def _decode_image(self, image):
         """
@@ -63,6 +62,7 @@ class Detector:
         :param threshold: threshold
         :return: dict
         """
+        print(threshold)
         results = {}
         expect_boxes = (np_boxes[:, 1] > threshold) & (np_boxes[:, 0] > -1)
         np_boxes = np_boxes[expect_boxes, :]
@@ -72,13 +72,14 @@ class Detector:
                        round(box[4], 2), round(box[5], 2)]
             return new_box
         np_boxes = list(map(handle_round, np_boxes))
+        print(np_boxes)
         results['boxes'] = np_boxes
         results['num'] = len(np_boxes)
         return results
 
     def predict(self,
                 image,
-                threshold=0.5):
+                threshold=configs.INFER_THRESHOLD):
         """
         predict image
         :param image: ndarray

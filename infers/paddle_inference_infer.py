@@ -4,7 +4,9 @@ from functools import reduce
 
 import numpy as np
 import paddle.fluid as fluid
+
 from tools.preprocess import *
+import configs
 
 
 def decode_image(im_file, im_info):
@@ -106,8 +108,7 @@ class Config:
             'arch'], self.support_models))
 
 
-def load_predictor(model_dir,
-                   run_mode='fluid',
+def load_predictor(run_mode='fluid',
                    batch_size=1,
                    use_gpu=False,
                    min_subgraph_size=3):
@@ -133,8 +134,8 @@ def load_predictor(model_dir,
         'trt_fp16': fluid.core.AnalysisConfig.Precision.Half
     }
     config = fluid.core.AnalysisConfig(
-        os.path.join(model_dir, '__model__'),
-        os.path.join(model_dir, '__params__'))
+        os.path.join(configs.PADDLE_INFERENCE_MODEL_DIR, '__model__'),
+        os.path.join(configs.PADDLE_INFERENCE_MODEL_DIR, '__params__'))
     if use_gpu:
         # initial GPU memory(M), device ID
         config.enable_use_gpu(100, 0)
@@ -245,7 +246,7 @@ class Detector:
 
     def predict(self,
                 image,
-                threshold=0.5,
+                threshold=configs.INFER_THRESHOLD,
                 warmup=0,
                 repeats=1,
                 run_benchmark=False):

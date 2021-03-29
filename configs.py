@@ -1,13 +1,16 @@
 import os
 
+# project root directory
 BASE_DIR = os.path.dirname(__file__)
 
+# the site used to test whether the network is working properly
 PING_NETWORK = 'www.baidu.com'
+
+# camera address
 CAMERA_FILE = 0
-PADDLE_INFERENCE_MODEL_DIR = os.path.join(BASE_DIR, 'paddle_inference_infer_model')
-PADDLELITE_MODEL = os.path.join(BASE_DIR, 'model.nb')
-INFER_THRESHOLD = 0.03
-GPIO_POWER_PIN_NUM = 11
+# infer module path
+INFER = 'infers.paddlelite_infer'
+# preprocess params
 IMAGE_PREPROCESS_PARAM = {
     'Resize': {'image_shape': [608, 608],
                'interp': 2,
@@ -22,5 +25,15 @@ IMAGE_PREPROCESS_PARAM = {
     'Permute': {'channel_first': True,
                 'to_bgr': False}
 }
+# the resulting filter threshold
+INFER_THRESHOLD = 0.03
 PREDICT_LABELS = ['failure',]
+# model file path
+PADDLE_INFERENCE_MODEL_DIR = os.path.join(BASE_DIR, 'paddle_inference_infer_model')
+PADDLELITE_MODEL = os.path.join(BASE_DIR, 'model.nb')
+
+# logger configuration, logger file name
 LOGGER_NAME = 'monitor'
+
+# gpio controlers configuration
+GPIO_POWER_PIN_NUM = 11

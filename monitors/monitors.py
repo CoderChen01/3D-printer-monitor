@@ -1,7 +1,5 @@
-import os
 import time
-import subprocess
-import importlib
+from datetime import datetime
 import multiprocessing as mp
 
 import cv2
@@ -9,18 +7,10 @@ import cv2
 import configs
 from monitor_logger.logger import get_logger
 from controlers.gpio_controlers import GPIOControler
+from infers.load_infer import get_infer
+from handlers import local_handler
 
 logger = get_logger()
-
-
-def check_network():
-    fnull = open(os.devnull, 'w')
-    retval = subprocess.call('ping ' + configs.PING_NETWORK + ' -n 2',
-                             shell=True,
-                             stdout=fnull,
-                             stderr=fnull)
-    fnull.close()
-    return False if retval else True
 
 
 class Monitor:
@@ -28,10 +18,8 @@ class Monitor:
                  uuid,
                  all_time,
                  inspection_interval=10,
-                 failure_num=5,
-                 infer='paddlelite_infer'):
+                 failure_num=5):
         self._boot()
-        self.infer = infer
         self.uuid = uuid
         self.all_time = all_time * 60
         self.inspection_interval = inspection_interval * 60
@@ -46,20 +34,6 @@ class Monitor:
         raise NotImplementedError('You must implement handler method')
 
     def _detector(self):
-        if self.infer == 'paddle_inference_infer':
-            infer_module = importlib.import_module(self.infer)
-            predictor = infer_module.Detector(configs.PADDLE_INFERENCE_MODEL_DIR)
-        elif self.infer == 'paddlelite_infer':
-            infer_module = importlib.import_module(self.infer)
-            predictor = infer_module.Detector(configs.PADDLELITE_MODEL,
-                                              configs.IMAGE_PREPROCESS_PARAM)
-        else:
-            logger.error('Monitor._detector: %s',
-                         'The Infer parameter can only be paddle_inference_infer'
-                         ' or paddlelite_infer!')
-            self.set_run_status(False)
-            return
-        start_time = time.time()
         capture = cv2.VideoCapture(configs.CAMERA_FILE)
         if not capture.isOpened():
             EXIT = -1
@@ -70,6 +44,7 @@ class Monitor:
             return
         logger.info('Monitor._detector: %s',
                     'Start monitor...')
+        start_time = time.time()
         while True:
             if time.time() - start_time >= self.all_time:
                 capture.release()
@@ -80,32 +55,25 @@ class Monitor:
                 return
             retval, frame = capture.read()
             if not retval:
-                logger.warning('Monitor.detector: %s',
+                logger.warning('Monitor._detector: %s',
                                'No frame was read')
                 continue
-            logger.debug('Monitor._detector: %s',
-                         'predicting...')
-            result = predictor.predict(frame,
-                                       threshold=configs.INFER_THRESHOLD)
-            logger.debug('Monitor._detector: %s',
-                         'finished...')
-            if result.get('num', 0) <= self.failure_num:
-                self.shared_queue.put(False)
-                logger.debug('Monitor._detector: %s',
-                             'put False')
-                continue
-            self.shared_queue.put(True)
+            logger.info('Monitor._detector: %s', 'get a frame')
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.shared_queue.put({
+                'frame': frame,
+                'current_time': current_time
+            })
             time.sleep(self.inspection_interval)
-            logger.debug('Monitor._detector: %s',
-                         'put True')
+
 
     @staticmethod
     def _shutdown():
-        GPIOControler(configs.GPIO_POWER_PIN_NUM).shutdown()
+        GPIOControler().shutdown()
 
     @staticmethod
     def _boot():
-        GPIOControler(configs.GPIO_POWER_PIN_NUM).boot()
+        GPIOControler().boot()
 
     def _run_monitor(self):
         self.set_run_status(True)
@@ -134,13 +102,11 @@ class LocalMonitor(Monitor):
                  all_time,
                  inspection_interval=10,
                  failure_num=5,
-                 infer='paddlelite_infer',
                  event_num=5):
         super(LocalMonitor, self).__init__(uuid,
                                            all_time,
                                            inspection_interval,
-                                           failure_num,
-                                           infer)
+                                           failure_num)
         self.event_num = event_num
 
     def run(self):
@@ -148,6 +114,11 @@ class LocalMonitor(Monitor):
 
     def _handler(self):
         event_num = 0
+        infer = get_infer()
+        if not infer:
+            self.set_run_status(False)
+            return
+        predictor = infer.Detector()
         start_time = time.time()
         while True:
             if time.time() - start_time >= self.all_time:
@@ -160,14 +131,30 @@ class LocalMonitor(Monitor):
                             'When the number of detection'
                             ' events exceeds the predetermined threshold,'
                             ' the switch is automatically turned off')
+                local_handler(frame, result)
                 self.set_run_status(False)
                 event_num = 0
                 self._shutdown()
                 return
-            if self.shared_queue.get():
-                event_num += 1
+            data = self.shared_queue.get()
+            frame = data['frame']
+            current_time = data['current_time']
+            logger.info('LocalMonitor._handler: %s',
+                         'predict at ' + current_time)
+            result = predictor.predict(frame)
+            if result.get('num', 0) <= self.failure_num:
                 logger.info('LocalMonitor._handler: %s',
-                            'Detect a envent, num: %d' % event_num)
+                             'good work. event num: %d/%d failure num: %d/%d' % (event_num,
+                                                                                  self.event_num,
+                                                                                  result.get('num', 0),
+                                                                                  self.failure_num))
+                continue
+            event_num += 1
+            logger.info('LocalMonitor._handler: %s',
+                             'bad work!!! event num: %d/%d failure num: %d/%d' % (event_num,
+                                                                                  self.event_num,
+                                                                                  result.get('num', 0),
+                                                                                  self.failure_num))
 
 
 class OnlineMonitor(Monitor):
@@ -176,10 +163,12 @@ class OnlineMonitor(Monitor):
                  all_time,
                  inspection_interval=10,
                  failure_num=5,
-                 infer='paddlelite',
                  alarm_num=3,
                  alarm_interval=2):
-        super(OnlineMonitor, self).__init__(uuid, all_time)
+        super(OnlineMonitor, self).__init__(uuid,
+                                            all_time,
+                                            inspection_interval,
+                                            failure_num)
         self.alarm_num = alarm_num
         self.alarm_interval = alarm_interval * 60
 
