@@ -22,5 +22,5 @@ ch.setFormatter(formater)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-monitor = LocalMonitor(uuid4(), 200, 2, event_num=1)
+monitor = LocalMonitor(uuid4(), 200, 1, event_num=5)
 ld, lh = monitor.run()

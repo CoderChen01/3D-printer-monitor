@@ -12,11 +12,16 @@ class Detector:
                  model_dir,
                  preprocess_param):
         config = MobileConfig()
-        config.set_model_from_file(model_dir)
+        config.set_model_from_file(model_dir)  # load yolov3 model
         self._predictor = create_paddle_predictor(config)
         self.preprocess_param = preprocess_param
 
     def _decode_image(self, image):
+        """
+        Load the image and pre-process it
+        :param image: ndarray
+        :return: ndarray, dict
+        """
         im_info = {
             'scale': [1., 1.],
             'origin_shape': None,
@@ -34,6 +39,12 @@ class Detector:
 
     @staticmethod
     def _create_inputs(im, im_info):
+        """
+        create yolov3 inputs
+        :param im: ndarray
+        :param im_info: dict
+        :return: yolov3 input
+        """
         inputs = {}
         inputs['image'] = im
         origin_shape = list(im_info['origin_shape'])
@@ -45,6 +56,13 @@ class Detector:
 
     @staticmethod
     def _postprocess(np_boxes, im_info, threshold=0.5):
+        """
+        process yolov3 output
+        :param np_boxes: yolov3 output
+        :param im_info: dict
+        :param threshold: threshold
+        :return: dict
+        """
         results = {}
         expect_boxes = (np_boxes[:, 1] > threshold) & (np_boxes[:, 0] > -1)
         np_boxes = np_boxes[expect_boxes, :]
@@ -61,6 +79,12 @@ class Detector:
     def predict(self,
                 image,
                 threshold=0.5):
+        """
+        predict image
+        :param image: ndarray
+        :param threshold: threshold
+        :return: result
+        """
         im, im_info = self._decode_image(image)
         inputs = self._create_inputs(im, im_info)
         input_tensor_image = self._predictor.get_input(0)
@@ -78,7 +102,11 @@ class Detector:
         self._predictor.run()
 
         np_boxes = self._predictor.get_output(0).float_data()
-        np_boxes = np.array(np_boxes).reshape(-1, 6)
+
+        try:
+            np_boxes = np.array(np_boxes).reshape(-1, 6)
+        except Exception:
+            return {'boxes': np.array([]), 'num': 0}
         if reduce(lambda x, y: x * y, np_boxes.shape) < 6:
             results = {'boxes': np.array([]), 'num': 0}
         else:
