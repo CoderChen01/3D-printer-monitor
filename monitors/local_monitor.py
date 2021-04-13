@@ -49,9 +49,9 @@ class LocalMonitor(Monitor):
                             ' events exceeds the predetermined threshold,'
                             ' the switch is automatically turned off')
                 local_handler(frame, result)
-                self.set_run_status(False)
                 event_num = 0
                 self._shutdown()
+                self.set_run_status(False)
                 return
             data = self.shared_queue.get()
             frame = data['frame']
