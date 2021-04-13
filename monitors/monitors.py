@@ -26,7 +26,6 @@ class Monitor:
         self.all_time = all_time * 60
         self.inspection_interval = inspection_interval * 60
         self.failure_num = failure_num
-        self._controler = get_controlers()
         self.shared_queue = mp.Queue()
         self._is_run = mp.Value('i', 0)
 
@@ -73,11 +72,17 @@ class Monitor:
             })
             time.sleep(self.inspection_interval)
 
-    def _shutdown(self):
-        self._controler.shutdown()
+    @staticmethod
+    def _shutdown():
+        controlers = get_controlers()
+        controler.shutdown()
+        controlers.close()
 
-    def _boot(self):
-        self._controler.boot()
+    @staticmethod
+    def _boot():
+        controlers = get_controlers()
+        controler.shutdown()
+        controlers.close()
 
     def _run_monitor(self):
         self.set_run_status(True)
@@ -95,9 +100,6 @@ class Monitor:
 
     def get_run_status(self):
         return self._is_run.value
-
-    def __del__(self):
-        self._controler.close()
 
 
 class LocalMonitor(Monitor):
