@@ -1,14 +1,16 @@
 import time
 from datetime import datetime
+import threading
 import multiprocessing as mp
 
 import cv2
 
 import configs
 from monitor_logger.logger import get_logger
-from controlers.gpio_controlers import GPIOControler
+from controlers import get_controlers
 from infers.load_infer import get_infer
 from handlers import local_handler
+from tools import GoodVideoCpature
 
 logger = get_logger()
 
@@ -24,6 +26,7 @@ class Monitor:
         self.all_time = all_time * 60
         self.inspection_interval = inspection_interval * 60
         self.failure_num = failure_num
+        self._controler = get_controlers()
         self.shared_queue = mp.Queue()
         self._is_run = mp.Value('i', 0)
 
@@ -34,11 +37,13 @@ class Monitor:
         raise NotImplementedError('You must implement handler method')
 
     def _detector(self):
-        capture = cv2.VideoCapture(configs.CAMERA_FILE)
-        if not capture.isOpened():
+        capture = GoodVideoCpature.create(configs.CAMERA_FILE)
+        capture.start_read()
+        if not capture.is_started():
             EXIT = -1
             logger.error('Monitor._detector: %s',
                          'Can\'t turn on the camera')
+            capture.stop_read()
             capture.release()
             self.set_run_status(False)
             return
@@ -47,13 +52,15 @@ class Monitor:
         start_time = time.time()
         while True:
             if time.time() - start_time >= self.all_time:
+                capture.stop_read()
                 capture.release()
                 self.set_run_status(False)
                 return
             if not self.get_run_status():
+                capture.stop_read()
                 capture.release()
                 return
-            retval, frame = capture.read()
+            retval, frame = capture.read_latest_frame()
             if not retval:
                 logger.warning('Monitor._detector: %s',
                                'No frame was read')
@@ -66,14 +73,11 @@ class Monitor:
             })
             time.sleep(self.inspection_interval)
 
+    def _shutdown(self):
+        self._controler.shutdown()
 
-    @staticmethod
-    def _shutdown():
-        GPIOControler().shutdown()
-
-    @staticmethod
-    def _boot():
-        GPIOControler().boot()
+    def _boot(self):
+        self._controler.boot()
 
     def _run_monitor(self):
         self.set_run_status(True)
@@ -93,7 +97,7 @@ class Monitor:
         return self._is_run.value
 
     def __del__(self):
-        GPIOControler.close()
+        self._controler.close()
 
 
 class LocalMonitor(Monitor):

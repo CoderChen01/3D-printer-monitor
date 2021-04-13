@@ -35,5 +35,12 @@ PADDLELITE_MODEL = os.path.join(BASE_DIR, 'model.nb')
 # logger configuration, logger file name
 LOGGER_NAME = 'monitor'
 
+
+# controlers configuration
+CONTROLER = 'controlers.serial_controlers.SerialControler'
+SERIAL_PORT = '/dev/ttyUSB0'
+SERIAL_BAUD_RATE = 9600
+SERIAL_TIMEOUT = 3
+# CONTROLER = 'controlers.GPIOControler'
 # gpio controlers configuration
-GPIO_POWER_PIN_NUM = 11
+# GPIO_POWER_PIN_NUM = 11

@@ -1,1 +1,2 @@
-from .local_handler import local_handler
+from .local_handler import *
+from .network_handler import *
