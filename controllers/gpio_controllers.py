@@ -19,6 +19,5 @@ class GPIOController:
     def boot(self):
         GPIO.output(self.pin_num, GPIO.LOW)
 
-    @staticmethod
-    def close():
-        GPIO.cleanup()
+    def close(self):
+        pass

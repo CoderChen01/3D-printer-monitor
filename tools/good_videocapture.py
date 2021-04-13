@@ -1,4 +1,5 @@
 import cv2
+import threading
 
 
 class GoodVideoCpature(cv2.VideoCapture):

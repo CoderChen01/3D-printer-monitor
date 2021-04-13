@@ -10,7 +10,7 @@ logger = get_logger()
 def get_controller():
     controller_module, controller = configs.CONTROLLER.rsplit('.', 1)
     try:
-        controller_class = getattr(importlib.import_module(controler_module), controller)
+        controller_class = getattr(importlib.import_module(controller_module), controller)
     except (AttributeError, ModuleNotFoundError):
         logger.error('controllers.get_controllers: %s', 'not found class')
     return controller_class()
