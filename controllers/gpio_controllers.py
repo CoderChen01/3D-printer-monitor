@@ -3,10 +3,10 @@ import RPi.GPIO as GPIO
 import configs
 
 
-__all__ = ['GPIOControler',]
+__all__ = ['GPIOController',]
 
 
-class GPIOControler:
+class GPIOController:
     def __init__(self):
         self.pin_num = configs.GPIO_POWER_PIN_NUM
         GPIO.setwarnings(False)

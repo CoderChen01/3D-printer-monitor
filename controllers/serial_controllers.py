@@ -4,10 +4,10 @@ import configs
 from monitor_logger.logger import get_logger
 
 
-__all__ = ['SerialControler',]
+__all__ = ['SerialController',]
 
 
-class SerialControler:
+class SerialController:
     def __init__(self):
         self.port = configs.SERIAL_PORT
         self.bps = configs.SERIAL_BAUD_RATE
