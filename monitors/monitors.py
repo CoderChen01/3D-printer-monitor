@@ -21,14 +21,14 @@ class Monitor:
                  all_time,
                  inspection_interval=10,
                  failure_num=5):
-        self._boot()
         self.uuid = uuid
         self.all_time = all_time * 60
         self.inspection_interval = inspection_interval * 60
         self.failure_num = failure_num
-        self._controller = get_controller()
         self.shared_queue = mp.Queue()
         self._is_run = mp.Value('i', 0)
+        self._controller = get_controller()
+        self._boot()
 
     def run(self):
         raise NotImplementedError('You must implement run method')
