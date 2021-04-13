@@ -1,11 +1,14 @@
-import cv2
+import time
 import threading
+
+import cv2
 
 
 class GoodVideoCpature(cv2.VideoCapture):
-    def __init__(self, url, *args, **kwargs):
+    def __init__(self, url, timeout = 3, *args, **kwargs):
         super(GoodVideoCpature, self).__init__(url, *args, **kwargs)
         self.frame_receiver = None
+        self.timeout = timeout
         self._result = (None, None)
         self._reading = False
 
@@ -33,6 +36,10 @@ class GoodVideoCpature(cv2.VideoCapture):
         self._reading = False
 
     def read_latest_frame(self):
+        start_time = time.time()
+        while not self._result[0] \
+              and (time.time() - start_time) <= self.timeout:
+              pass
         return self._result
 
     def start_read(self):
