@@ -62,7 +62,6 @@ class Detector:
         :param threshold: threshold
         :return: dict
         """
-        print(threshold)
         results = {}
         expect_boxes = (np_boxes[:, 1] > threshold) & (np_boxes[:, 0] > -1)
         np_boxes = np_boxes[expect_boxes, :]
@@ -72,7 +71,6 @@ class Detector:
                        round(box[4], 2), round(box[5], 2)]
             return new_box
         np_boxes = list(map(handle_round, np_boxes))
-        print(np_boxes)
         results['boxes'] = np_boxes
         results['num'] = len(np_boxes)
         return results
