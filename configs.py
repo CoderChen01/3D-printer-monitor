@@ -44,3 +44,7 @@ SERIAL_TIMEOUT = 3
 # CONTROLLER = 'controlers.GPIOControler'
 # gpio controlLers configuration
 # GPIO_POWER_PIN_NUM = 11
+
+
+# server configuration
+SERVER_ADRESS = 'aocpo.ahpu.edu.cn'
