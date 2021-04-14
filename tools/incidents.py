@@ -1,4 +1,5 @@
 import requests
+from uuid import uuid4
 
 
 class Text:
