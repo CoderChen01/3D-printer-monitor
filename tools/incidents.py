@@ -1,3 +1,6 @@
+import requests
+
+
 class Text:
     def __init__(self,
                  key,

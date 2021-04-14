@@ -1,5 +1,3 @@
-import requests
-
 import configs
 from monitor_logger.logger import get_logger
 from tools import visualize_box_mask
