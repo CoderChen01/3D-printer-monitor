@@ -55,7 +55,7 @@ def visualize_box_mask(im, results, labels, mask_resolution=14):
     if isinstance(im, str):
         im = Image.open(im).convert('RGB')
     else:
-        im = Image.fromarray(im)
+        im = Image.fromarray(im).convert('RGB')
     if 'masks' in results and 'boxes' in results:
         im = draw_mask(
             im,
